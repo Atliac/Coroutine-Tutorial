@@ -100,7 +100,7 @@ struct awaitable
 
 The C++20 standard library provides two trivial awaitable types: [std::suspend_always](https://en.cppreference.com/w/cpp/coroutine/suspend_always) and [std::suspend_never](https://en.cppreference.com/w/cpp/coroutine/suspend_never) for convenience.
 
-Let's create two fake compiler generated functions to explain how the compiler calls the member functions of an awaitable object.
+Let's create two fake functions to explain how the compiler calls the member functions of an awaitable object.
 
 ```cpp
 awaitable __get_awaitable(T& t);
@@ -188,7 +188,7 @@ std::coroutine_handle is a lightweight type. It's cheap to copy, move, and store
 
 We can get a `std::coroutine_handle` object of a coroutine by calling the `std::coroutine_handle<promise_type>::from_promise()` function or from `await_suspend()` function of an awaitable object.
 
-## Practise I
+## Practise
 
 Let's practise what we've learned so far.
 
