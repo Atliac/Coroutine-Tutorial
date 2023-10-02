@@ -82,7 +82,7 @@ struct promise_type
 
 ## The Caller and Resumers of a Coroutine
 
-The code point that calls a coroutine is called the **caller** of that coroutine. The coroutine returns a value of type of return type of the coroutine when the coroutine hits its first suspension point or falls off the end of the coroutine body without hitting any suspension point.
+The code point that calls a coroutine is called the **caller** of that coroutine. The coroutine returns a value of coroutine_return_type type when the coroutine hits its first suspension point or falls off the end of the coroutine body without hitting any suspension point.
 
 The code point that resumes a coroutine is called the **resumer** of that coroutine. The coroutine returns to the resumer when it hits the next suspension point or falls off the end of the coroutine body without hitting another suspension point.
 
@@ -116,7 +116,7 @@ A **coroutine handle** is an object of type [std::coroutine_handle](https://en.c
 
 ## Compiler Transformation
 
-The compiler transform any coroutine,
+The compiler transforms any coroutine,
 
 ```cpp
 coroutine_return_type coroutine_name(coroutine_parameter_list)

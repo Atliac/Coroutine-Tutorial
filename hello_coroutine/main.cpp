@@ -1,8 +1,8 @@
-﻿#include <iostream>
-#include <coroutine>
+﻿#include <coroutine>
+#include <iostream>
 
 using namespace std;
-template<> struct std::coroutine_traits<void>
+template <> struct std::coroutine_traits<void>
 {
     struct promise_type
     {
@@ -23,5 +23,5 @@ void hello_coroutine()
 int main()
 {
     hello_coroutine();
-	return 0;
+    return 0;
 }
