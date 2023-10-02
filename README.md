@@ -4,7 +4,7 @@
 
 A coroutine is a generalized function that can suspend its execution and be resumed later.
 
-In C++20, a coroutine is a function that satisfies the following requirements:
+In C++20, a coroutine is any function that satisfies the following requirements:
 
 1. Uses at least one of the following keywords in its body:
    - `co_await`
@@ -43,7 +43,7 @@ template <typename R, typename T, typename... Args> struct std::coroutine_traits
 template <> struct std::coroutine_traits<void> {...};
 ```
 
-The `std::coroutine_traits` template has a member type `promise_type`, which implements a specific interface. The `promise_type` is the place where the actual traits definition happens.
+The `std::coroutine_traits` template has a member class type `promise_type`, which implements a specific interface. The `promise_type` is the place where the actual traits definition happens.
 
 ```cpp
 template <...> struct std::coroutine_traits<...>
@@ -59,23 +59,56 @@ Traits are public member functions of the `std::coroutine_traits<...>::promise_t
 
 `promise_type` class is defined by the programmer, but is instantiated and used by the compiler automatically.
 
+## Interface of promise_type
+
+```cpp
+struct promise_type
+{
+    coroutine_return_type get_return_object();
+    awaitable_type initial_suspend();
+    awaitable_type final_suspend();
+    void unhandled_exception();
+
+    // one of the following:
+    void return_void(); // to co_return;
+    void return_value(T); // to co_return expr;
+
+    // optional
+    promise_type(Args...args); // constructor that accepts arguments that match the coroutine's arguments
+    void yield_value(T); // to co_yield expr;
+    class_type await_transform(T); // to co_await expr;
+};
+```
+
 ## The Caller and Resumers of a Coroutine
 
-The code point that calls a coroutine is called the **caller** of that coroutine. The coroutine returns a value of type of return type of the coroutine when the coroutine hits its first suspension point or falling off the end of the coroutine body without hitting any suspension point.
+The code point that calls a coroutine is called the **caller** of that coroutine. The coroutine returns a value of type of return type of the coroutine when the coroutine hits its first suspension point or falls off the end of the coroutine body without hitting any suspension point.
 
-The code point that resumes a coroutine is called the **resumer** of that coroutine. The coroutine returns to the resumer when it hits the next suspension point or falling off the end of the coroutine body without hitting another suspension point.
+The code point that resumes a coroutine is called the **resumer** of that coroutine. The coroutine returns to the resumer when it hits the next suspension point or falls off the end of the coroutine body without hitting another suspension point.
 
 ## The Threading Model of Coroutines
 
-Unlike normal functions, which are bound to the thread of their callers, coroutines starts their execution on the thread of their callers, and resume their execution on the thread of their resumers.
+Unlike normal functions, which are bound to the thread of their callers, coroutines start their execution on the thread of their callers, and resume their execution on the thread of their resumers.
 
 The cool thing is that, even if the threading context may change, the codes in the coroutine function run as if they are in a single thread.
 
 ## Awaitables
 
-An **awaitable** is an object of a class type that implements a special interface. Its public member functions are called by complier to handle the suspension and resumption of a coroutine.
+An **awaitable** is an object of a class type that implements a special interface.
 
 Awaitable class is defined and instantiated by the programmer, but is used by the compiler automatically.
+
+## Awaitable Interface
+
+```cpp
+struct awaitable_type
+{
+    bool await_ready();
+    // R can be void, bool, or std::coroutine_handle<>
+    R await_suspend(std::coroutine_handle<>);
+    auto await_resume();
+};
+```
 
 ## Coroutine Handle
 
@@ -92,7 +125,7 @@ coroutine_return_type coroutine_name(coroutine_parameter_list)
 }
 ```
 
-, with the following steps roughly:
+with the following steps roughly:
 
 ```cpp
 // pseudo helper function: __get_awatiable
@@ -109,10 +142,9 @@ coroutine_return_type coroutine_name(coroutine_parameter_list)
 
     coroutine_return_type coroutine_return_value= promise_object.get_return_object();
     // the coroutine_return_value is returned to the caller when the coroutine hits its first suspension point
-    // or falling off the end of the coroutine body without hitting any suspension point
+    // or falls off the end of the coroutine body without hitting any suspension point
 
     __await_routine(promise_object.initial_suspend());
-    // the return value of previous call is discarded
     
     try
     {
@@ -134,7 +166,7 @@ coroutine_return_type coroutine_name(coroutine_parameter_list)
     // coroutine suspends here can not be resumed by the resume function of the coroutine_handle,
     // but can be resumed by the destroy function of the coroutine_handle
 
-    // if the coroutine falls off the previous steps or be destoryed after a suspension point,
+    // if the coroutine falls off the previous steps or be destoryed after any suspension point,
     // it destructs the promise_object as well as any local variables of the coroutine,
     // transfters the control to the caller or resumer
 }
@@ -151,7 +183,7 @@ awaitable_type __get_awatiable(Exp exp)
     if constexpr(/*if the class type of awaitable overloads co_await operator as a member function*/)
     {
         return awaitable.operator co_await();
-    }else if constexpr(/* this is a free co_await operator function that takes the type of awaitable as its parameter*/)
+    }else if constexpr(/* there is a free co_await operator function that takes the type of awaitable as its parameter*/)
     {
         return operator co_await(awaitable);
     }
@@ -188,6 +220,9 @@ auto __await_routine(awaitable_type awaitable)
         // the return type of await_suspend function is std::coroutine_handle<void>
         auto handle_of_other_coroutine= awaitable.await_suspend(handle_of_the_coroutine);
         handle_of_other_coroutine.resume(); // resume the other coroutine
+
+        // if the other coroutine that represented by handle_of_other_coroutine didn't resume the current coroutine,
+        // else jump to the <resume point>
         <returns control to the caller or resumer>
     }
 
@@ -198,39 +233,6 @@ auto __await_routine(awaitable_type awaitable)
 }
 ```
 
-## Interface of promise_type
-
-```cpp
-struct promise_type
-{
-    coroutine_return_type get_return_object();
-    awaitable_type initial_suspend();
-    awaitable_type final_suspend();
-    void unhandled_exception();
-
-    // one of the following:
-    void return_void(); // to co_return;
-    void return_value(T); // to co_return expr;
-
-    // optional
-    promise_type(Args...args); // constructor that accepts arguments that match the coroutine's arguments
-    void yield_value(T); // to co_yield expr;
-    class_type await_transform(T); // to co_await expr;
-};
-```
-
-## Awaitable Interface
-
-```cpp
-struct awaitable_type
-{
-    bool await_ready();
-    // R can be void, bool, or std::coroutine_handle<>
-    R await_suspend(std::coroutine_handle<>);
-    auto await_resume();
-};
-```
-
 ## Example
 
 See [hello_coroutine](hello_coroutine/main.cpp).
@@ -239,3 +241,7 @@ See [hello_coroutine](hello_coroutine/main.cpp).
 
 - [C++20 Coroutine](https://en.cppreference.com/w/cpp/language/coroutines)
 - [Coroutine Theory](https://lewissbaker.github.io/)
+
+## The End
+
+Thanks for reading. Any suggestions or corrections are welcome.
