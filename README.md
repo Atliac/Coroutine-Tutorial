@@ -163,8 +163,10 @@ coroutine_return_type coroutine_name(coroutine_parameter_list)
     }
 
     __await_routine(promise_object.final_suspend());
-    // coroutine suspends here can not be resumed by the resume function of the coroutine_handle,
-    // but can be resumed by the destroy function of the coroutine_handle
+    // 1. coroutine suspends here can not be resumed by the resume function of the coroutine_handle,
+    //    but can be resumed by the destroy function of the coroutine_handle.
+    // 2. the functions that implement the awaitable interface returned by the promise_type::final_suspend()
+    //    are required to be non-throwing.
 
     // if the coroutine falls off the previous steps or be destoryed after any suspension point,
     // it destructs the promise_object as well as any local variables of the coroutine,
