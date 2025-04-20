@@ -252,7 +252,7 @@ auto __await_routine(awaitable_type awaitable)
         awaitable.await_suspend(handle_of_the_coroutine);
 
         <returns control to the caller or resumer>
-    }else if(/* the return type of await_suspend function is bool*/)
+    }else if constexpr(/* the return type of await_suspend function is bool*/)
     {
         if(awaitable.await_suspend(handle_of_the_coroutine))
         {
